@@ -13,7 +13,6 @@ class SongsHandler {
     const songId = await this._service.addSong({
       title, year, genre, performer, duration, albumId,
     });
-
     const response = h.response({
       status: 'success',
       message: 'Lagu berhasil ditambahkan',
@@ -25,7 +24,17 @@ class SongsHandler {
     return response;
   }
 
-  async getSongsHandler() {
+  async getSongsHandler(request) {
+    const { title = null, performer = null } = request.query;
+    if (title !== null || performer !== null) {
+      const songs = await this._service.getSongByQuery(title, performer);
+      return {
+        status: 'success',
+        data: {
+          songs,
+        },
+      };
+    }
     const songs = await this._service.getSongs();
     return {
       status: 'success',
