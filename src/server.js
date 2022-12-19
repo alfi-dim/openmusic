@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 require('dotenv').config();
 const Hapi = require('@hapi/hapi');
 const album = require('./api/albums');
