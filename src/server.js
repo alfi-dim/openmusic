@@ -1,21 +1,39 @@
 /* eslint-disable no-console */
 require('dotenv').config();
 const Hapi = require('@hapi/hapi');
+const Jwt = require('@hapi/jwt');
+
+// album
 const album = require('./api/albums');
-const songs = require('./api/songs');
-const users = require('./api/users');
-const ClientError = require('./exception/ClientError');
-const AlbumService = require('./services/postgres/AlbumService');
-const SongsService = require('./services/postgres/SongsService');
-const UsersService = require('./services/postgres/UsersService');
 const AlbumsValidator = require('./validator/albums');
+const AlbumService = require('./services/postgres/AlbumService');
+
+// songs
+const songs = require('./api/songs');
+const SongsService = require('./services/postgres/SongsService');
 const SongsValidator = require('./validator/songs');
+
+// user
+const users = require('./api/users');
+const UsersService = require('./services/postgres/UsersService');
 const UsersValidator = require('./validator/users');
+
+// authentications
+const authentications = require('./api/authentications');
+const AuthenticationsValidator = require('./validator/authentications');
+const AuthenticationsSerivce = require('./services/postgres/AuthenticationsService');
+
+// error handling
+const ClientError = require('./exception/ClientError');
+
+// token manager
+const TokenManager = require('./tokenize/TokenManager');
 
 const init = async () => {
   const albumService = new AlbumService();
   const songsService = new SongsService();
-  const userService = new UsersService();
+  const usersService = new UsersService();
+  const authenticationsService = new AuthenticationsSerivce();
   const server = Hapi.server({
     host: process.env.HOST,
     port: process.env.PORT,
@@ -24,6 +42,26 @@ const init = async () => {
         origin: ['*'],
       },
     },
+  });
+
+  await server.register({
+    plugin: Jwt,
+  });
+
+  server.auth.strategy('openmusic_jwt', 'jwt', {
+    keys: process.env.ACCESS_TOKEN_KEY,
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      maxAgeSec: process.env.ACCESS_TOKEN_AGE,
+    },
+    validate: (artifacts) => ({
+      isValid: 'true',
+      credentials: {
+        id: artifacts.decoded.payload.id,
+      },
+    }),
   });
 
   await server.register([
@@ -44,8 +82,17 @@ const init = async () => {
     {
       plugin: users,
       options: {
-        service: userService,
+        service: usersService,
         validator: UsersValidator,
+      },
+    },
+    {
+      plugin: authentications,
+      options: {
+        authenticationsService,
+        usersService,
+        tokenManager: TokenManager,
+        validator: AuthenticationsValidator,
       },
     },
   ]);
