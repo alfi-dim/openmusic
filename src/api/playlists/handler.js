@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable no-underscore-dangle */
 class PlaylistsHandler {
   constructor(playlistService, usersService, songsService, validator) {
@@ -26,7 +27,13 @@ class PlaylistsHandler {
 
   async getPlaylistsHandler(request) {
     const { id: credentialId } = request.auth.credentials;
-    const playlists = await this._playlistsService.getOwnedPlaylists(credentialId);
+    const playlists = await this._playlistsService.getAllPlaylist(credentialId);
+    await Promise.all(playlists.map(async (playlist) => {
+      const { username: ownerId } = playlist;
+      const ownerName = await this._usersService.getUsernameById(ownerId);
+      // eslint-disable-next-line no-param-reassign
+      playlist.username = ownerName;
+    }));
     return {
       status: 'success',
       data: {
@@ -38,7 +45,7 @@ class PlaylistsHandler {
   async deletePlaylistHandler(request) {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
-    await this._playlistsService.verifyPlaylistOwner({ playlistId: id, owner: credentialId });
+    await this._playlistsService.verifyPlaylistOwner({ playlistId: id, userId: credentialId });
     await this._playlistsService.deletePlaylist(id);
 
     return {
@@ -53,8 +60,11 @@ class PlaylistsHandler {
     const { id: credentialId } = request.auth.credentials;
 
     await this._validator.validateSongToPlaylistPayload(request.payload);
-    await this._playlistsService.verifyPlaylistOwner({ playlistId: id, owner: credentialId });
+    await this._playlistsService.verifyPlaylistAccess({ playlistId: id, userId: credentialId });
     await this._playlistsService.addSongToPlaylist({ playlistId: id, songId });
+    await this._playlistsService.addPlaylistSongActivities({
+      playlistId: id, songId, userId: credentialId, action: 'add',
+    });
 
     const response = h.response({
       status: 'success',
@@ -67,7 +77,7 @@ class PlaylistsHandler {
   async getSongsFromPlaylistHandler(request) {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
-    await this._playlistsService.verifyPlaylistOwner({ playlistId: id, owner: credentialId });
+    await this._playlistsService.verifyPlaylistAccess({ playlistId: id, userId: credentialId });
     const playlist = await this._playlistsService.getPlaylistById(id);
     const songsId = await this._playlistsService.getSongIdbyPlaylist(id);
 
@@ -100,13 +110,45 @@ class PlaylistsHandler {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
     const { songId } = request.payload;
-    await this._playlistsService.verifyPlaylistOwner({ playlistId: id, owner: credentialId });
+    await this._playlistsService.verifyPlaylistAccess({ playlistId: id, userId: credentialId });
     await this._validator.validateSongToPlaylistPayload(request.payload);
     await this._playlistsService.deleteSongFromPlaylist(id, songId);
+    await this._playlistsService.addPlaylistSongActivities({
+      playlistId: id, songId, userId: credentialId, action: 'delete',
+    });
 
     return {
       status: 'success',
       message: 'lagu berhasil dihapus dari playlist',
+    };
+  }
+
+  async getPlaylistActivitiesHandler(request) {
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+    await this._playlistsService.verifyPlaylistAccess({ playlistId: id, userId: credentialId });
+    const activities = await this._playlistsService.getPlaylistActivitiesByPlaylistId({
+      playlistId: id, userId: credentialId,
+    });
+
+    await Promise.all(activities.map(async (activity) => {
+      // get username
+      const { username: userId } = activity;
+      const username = await this._usersService.getUsernameById(userId);
+      activity.username = username;
+
+      // get song title
+      const { title: songId } = activity;
+      const title = await this._songsService.getSongTitleById(songId);
+      activity.title = title;
+    }));
+
+    return {
+      status: 'success',
+      data: {
+        playlistId: id,
+        activities,
+      },
     };
   }
 }

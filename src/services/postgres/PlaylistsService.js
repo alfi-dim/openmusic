@@ -1,14 +1,16 @@
+/* eslint-disable no-multi-str */
 /* eslint-disable no-underscore-dangle */
 const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
 const AuthorizationError = require('../../exception/AuthorizationError');
 const InvariantError = require('../../exception/InvariantError');
 const NotFoundError = require('../../exception/NotFound');
-const { mapDBToModelPlaylists } = require('../../utils/mapDBToModel');
+const { mapDBToModelPlaylists, mapDBToModelPlaylistsActivities } = require('../../utils/mapDBToModel');
 
 class PlaylistsService {
-  constructor() {
+  constructor(collaborationsService) {
     this._pool = new Pool();
+    this._collaborationsService = collaborationsService;
   }
 
   async addPlaylist({ name, owner }) {
@@ -27,9 +29,12 @@ class PlaylistsService {
     return result.rows[0].id;
   }
 
-  async getOwnedPlaylists(owner) {
+  async getAllPlaylist(owner) {
     const query = {
-      text: 'SELECT * FROM playlist WHERE owner = $1',
+      text: 'SELECT playlist.* FROM playlist \
+      LEFT JOIN collaborations ON collaborations.playlist_id = playlist_id \
+      WHERE playlist.owner = $1 OR collaborations.user_id = $1 \
+      GROUP BY playlist.id',
       values: [owner],
     };
     const result = await this._pool.query(query);
@@ -69,20 +74,34 @@ class PlaylistsService {
     }
   }
 
-  async verifyPlaylistOwner({ playlistId, owner }) {
+  async verifyPlaylistOwner({ playlistId, userId: owner }) {
     const query = {
-      text: 'SELECT id, owner FROM playlist WHERE id = $1',
+      text: 'SELECT * FROM playlist WHERE id = $1',
       values: [playlistId],
     };
-
     const result = await this._pool.query(query);
-
     if (!result.rows.length) {
       throw new NotFoundError('Playlist tidak ditemukan');
     }
 
     if (result.rows[0].owner !== owner) {
       throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+    }
+  }
+
+  async verifyPlaylistAccess({ playlistId, userId }) {
+    try {
+      await this.verifyPlaylistOwner({ playlistId, userId });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      try {
+        await this._collaborationsService.verifyCollaborator(playlistId, userId);
+      } catch {
+        throw error;
+      }
     }
   }
 
@@ -120,6 +139,37 @@ class PlaylistsService {
     if (!result.rows.length) {
       throw new NotFoundError('Lagu gagal dihapus, id tidak ditemukan');
     }
+  }
+
+  async addPlaylistSongActivities({
+    playlistId, songId, userId, action,
+  }) {
+    const id = `playlist-activities-${nanoid(16)}`;
+    const date = new Date().toISOString();
+    const query = {
+      text: 'INSERT INTO playlist_song_activities VALUES($1, $2, $3, $4, $5, $6) RETURNING id',
+      values: [id, playlistId, songId, userId, action, date],
+    };
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new InvariantError('Activities gagal ditambahkan');
+    }
+  }
+
+  async getPlaylistActivitiesByPlaylistId({ playlistId, userId }) {
+    const query = {
+      text: 'SELECT song_id, user_id, action, time FROM playlist_song_activities WHERE playlist_id = $1 AND user_id = $2',
+      values: [playlistId, userId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Activities tidak ditemukan');
+    }
+
+    return result.rows.map(mapDBToModelPlaylistsActivities);
   }
 }
 
