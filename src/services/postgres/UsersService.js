@@ -3,6 +3,8 @@ const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const InvariantError = require('../../exception/InvariantError');
+const AuthenticationError = require('../../exception/AuthenticationError');
+const NotFoundError = require('../../exception/NotFound');
 
 class UsersService {
   constructor() {
@@ -25,6 +27,31 @@ class UsersService {
     return result.rows[0].id;
   }
 
+  async verifyUserIsExistById({ userId }) {
+    const query = {
+      text: 'SELECT id FROM users WHERE id = $1',
+      values: [userId],
+    };
+    const result = await this._pool.query(query);
+    if (!result.rows.length) {
+      throw new NotFoundError('User tidak ditermukan');
+    }
+  }
+
+  async getUsernameById(userId) {
+    const query = {
+      text: 'SELECT username FROM users WHERE id = $1',
+      values: [userId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('User tidak ditemukan');
+    }
+    return result.rows[0].username;
+  }
+
   async verifyUsername(username) {
     const query = {
       text: 'SELECT * FROM users WHERE username = $1',
@@ -35,6 +62,25 @@ class UsersService {
     if (result.rows.length > 0) {
       throw new InvariantError('Gagal menambahkan user. Username sudah digunakan');
     }
+  }
+
+  async verifyUserCredential(username, password) {
+    const query = {
+      text: 'SELECT id, password FROM users WHERE username = $1',
+      values: [username],
+    };
+    const result = await this._pool.query(query);
+    if (!result.rows.length) {
+      throw new AuthenticationError('Kredensial (user) tidak valid');
+    }
+
+    const { id, password: hashedPassword } = result.rows[0];
+
+    const match = await bcrypt.compare(password, hashedPassword);
+    if (!match) {
+      throw new AuthenticationError('Kredensial (password) tidak valid');
+    }
+    return id;
   }
 }
 
