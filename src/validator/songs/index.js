@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const InvariantError = require('../../exception/InvariantError');
 const { songsPayloadScema } = require('./schema');
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 class AlbumHandler {
   constructor(service, validator) {
     this._service = service;

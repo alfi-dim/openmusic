@@ -1,7 +1,3 @@
-/* eslint-disable camelcase */
-
-exports.shorthands = undefined;
-
 exports.up = (pgm) => {
   // menghapus semua cosntraint fk lama (not on delete cascade)
   pgm.dropConstraint('songs', 'songs_album_id_fkey');

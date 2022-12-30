@@ -1,5 +1,4 @@
 /* eslint-disable no-param-reassign */
-/* eslint-disable no-underscore-dangle */
 class PlaylistsHandler {
   constructor(playlistService, usersService, songsService, validator) {
     this._playlistsService = playlistService;
@@ -81,12 +80,10 @@ class PlaylistsHandler {
     const playlist = await this._playlistsService.getPlaylistById(id);
     const songsId = await this._playlistsService.getSongIdbyPlaylist(id);
 
-    // get playlist owner name from owner id
     const { username: ownerId } = playlist;
     const ownerName = await this._usersService.getUsernameById(ownerId);
     playlist.username = ownerName;
 
-    // get song detail
     const songs = [];
     await Promise.all(songsId.map(async ({ song_id: songId }) => {
       const data = await this._songsService.getSongById(songId);

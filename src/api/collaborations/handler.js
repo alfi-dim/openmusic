@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 class CollaborationsHandler {
   constructor(collaborationsService, playlistsService, usersService, validator) {
     this._collaborationsService = collaborationsService;

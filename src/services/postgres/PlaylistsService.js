@@ -1,5 +1,3 @@
-/* eslint-disable no-multi-str */
-/* eslint-disable no-underscore-dangle */
 const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
 const AuthorizationError = require('../../exception/AuthorizationError');
@@ -48,7 +46,7 @@ class PlaylistsService {
       values: [playlistId],
     };
     const result = await this._pool.query(query);
-    return result.rows.map(mapDBToModelPlaylists)[0];
+    return mapDBToModelPlaylists(result.rows[0]);
   }
 
   async deletePlaylist(playlistId) {
@@ -57,7 +55,7 @@ class PlaylistsService {
       values: [playlistId],
     };
     const result = await this._pool.query(query);
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Playlist gagal dihapus');
     }
   }

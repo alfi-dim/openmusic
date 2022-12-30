@@ -10,5 +10,7 @@
         "ecmaVersion": "latest"
     },
     "rules": {
+        "no-multi-str": "off",
+        "no-underscore-dangle": "off"
     }
 }
