@@ -15,5 +15,16 @@
   "bugs": {
     "url": "https://github.com/alfi-dim/openmusic/issues"
   },
-  "homepage": "https://github.com/alfi-dim/openmusic#readme"
+  "homepage": "https://github.com/alfi-dim/openmusic#readme",
+  "devDependencies": {
+    "eslint": "^8.31.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.26.0"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "dotenv": "^16.0.3",
+    "nodemailer": "^6.8.0",
+    "pg": "^8.8.0"
+  }
 }
