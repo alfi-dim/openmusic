@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const config = {
   app: {
     host: process.env.HOST,
@@ -8,6 +10,11 @@ const config = {
   },
   redis: {
     server: process.env.REDIS_SERVER,
+  },
+  token: {
+    accessKey: process.env.ACCESS_TOKEN_KEY,
+    refreshKey: process.env.REFRESH_TOKEN_KEY,
+    tokenAge: process.env.ACCESS_TOKEN_AGE,
   },
 };
 
