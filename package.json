@@ -1,0 +1,19 @@
+{
+  "name": "openmusic-consumer",
+  "version": "1.0.0",
+  "description": "Consumer API for openmusic",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alfi-dim/openmusic.git"
+  },
+  "author": "Dimas Alfiansyah",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alfi-dim/openmusic/issues"
+  },
+  "homepage": "https://github.com/alfi-dim/openmusic#readme"
+}
